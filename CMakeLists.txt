@@ -7,4 +7,5 @@ add_executable(
         hft-sim
         src/main.cpp
         src/OrderBook.cpp
+        src/Order.cpp
 )
