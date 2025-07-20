@@ -1,0 +1,43 @@
+# Build artifacts
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+*.cmake
+
+# Executables and object files
+*.o
+*.obj
+*.so
+*.dll
+*.exe
+*.out
+*.a
+
+# CLion / JetBrains IDE
+.idea/
+*.iml
+
+# macOS system files
+.DS_Store
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Unit test output
+Testing/
+CTestTestfile.cmake
+test_detail.xml
+
+# Core dumps
+core.*
+
+# Python cache (if ML scripts added)
+__pycache__/
+*.py[cod]
+
+# Claude or config files (optional)
+Claude.md
+*.swp
