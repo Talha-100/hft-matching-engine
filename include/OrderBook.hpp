@@ -10,11 +10,13 @@ private:
     std::deque<Order> buyOrders;
     std::deque<Order> sellOrders;
     int nextOrderId = 1;
+    void sortOrders();
 
 public:
     int addOrder(OrderType type, double price, int quantity);
     bool cancelOrder(int orderId);
     void printOrderBook() const;
+    void matchOrders();
 };
 
 #endif

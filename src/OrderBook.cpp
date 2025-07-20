@@ -24,6 +24,7 @@ bool OrderBook::cancelOrder(int orderId) {
     };
     return cancel(buyOrders) || cancel(sellOrders);
 }
+
 void OrderBook::printOrderBook() const {
     std::cout << "Buy Orders:\n";
     for (const auto& order : buyOrders) {
@@ -32,5 +33,53 @@ void OrderBook::printOrderBook() const {
     std::cout << "Sell Orders:\n";
     for (const auto& order : sellOrders) {
         std::cout << order.to_string() << "\n";
+    }
+}
+
+void OrderBook::sortOrders() {
+    // Sort orders by price first and then by ID (time priority)
+
+    std::sort(buyOrders.begin(), buyOrders.end(),
+        [](const Order& a, const Order& b) {
+            if (a.price != b.price) { return a.price > b.price; }
+            return a.id < b.id;
+        });
+
+    std::sort(sellOrders.begin(), sellOrders.end(),
+        [](const Order& a, const Order& b) {
+            if (a.price != b.price) { return a.price < b.price; }
+            return a.id < b.id;
+        });
+}
+
+void OrderBook::matchOrders() {
+    sortOrders();
+
+    while (!buyOrders.empty() && !sellOrders.empty()) {
+        Order& bestBuy = buyOrders.front();
+        Order& bestSell = sellOrders.front();
+
+        if (bestBuy.price < bestSell.price) {
+            break; // No more matches possible
+        }
+
+        // Execute the trade at the sell price
+        int tradeQuantity = std::min(bestBuy.quantity, bestSell.quantity);
+        double tradePrice = bestSell.price;
+
+        std::cout << "TRADE EXECUTED: " << tradeQuantity << " shares at $"
+                    << tradePrice << " (Buy ID: " << bestBuy.id
+                    << ", Sell ID: " << bestSell.id << ")\n";
+
+        bestBuy.quantity -= tradeQuantity;
+        bestSell.quantity -= tradeQuantity;
+
+        // Remove fully filled orders
+        if (bestBuy.quantity == 0) {
+            buyOrders.pop_front();
+        }
+        if (bestSell.quantity == 0) {
+            sellOrders.pop_front();
+        }
     }
 }
