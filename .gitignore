@@ -41,3 +41,4 @@ __pycache__/
 # Claude or config files (optional)
 Claude.md
 *.swp
+project-context.md
