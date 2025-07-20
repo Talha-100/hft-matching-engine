@@ -8,4 +8,5 @@ add_executable(
         src/main.cpp
         src/OrderBook.cpp
         src/Order.cpp
+        src/Trade.cpp
 )

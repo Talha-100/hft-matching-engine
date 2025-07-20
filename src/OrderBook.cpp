@@ -1,4 +1,5 @@
 #include "OrderBook.hpp"
+#include "Trade.hpp"
 #include <iostream>
 #include <algorithm>
 
@@ -67,9 +68,7 @@ void OrderBook::matchOrders() {
         int tradeQuantity = std::min(bestBuy.quantity, bestSell.quantity);
         double tradePrice = bestSell.price;
 
-        std::cout << "TRADE EXECUTED: " << tradeQuantity << " shares at $"
-                    << tradePrice << " (Buy ID: " << bestBuy.id
-                    << ", Sell ID: " << bestSell.id << ")\n";
+        trades.emplace_back(bestBuy.id, bestSell.id, tradePrice, tradeQuantity);
 
         bestBuy.quantity -= tradeQuantity;
         bestSell.quantity -= tradeQuantity;
@@ -82,4 +81,8 @@ void OrderBook::matchOrders() {
             sellOrders.pop_front();
         }
     }
+}
+
+const std::vector<Trade>& OrderBook::getTrades() const {
+    return trades;
 }

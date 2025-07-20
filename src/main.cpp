@@ -19,5 +19,10 @@ int main() {
     std::cout << "\nAfter matching:\n";
     book.printOrderBook();
 
+    std::cout << std::endl;
+    for (const auto& trade : book.getTrades()) {
+        std::cout << trade.toString() << "\n";
+    }
+
     return 0;
 }
