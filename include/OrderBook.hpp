@@ -19,7 +19,7 @@ public:
     bool cancelOrder(int orderId);
     void printOrderBook() const;
     void matchOrders();
-    const std::vector<Trade>& getTrades() const;
+    const std::vector<Trade>& getTradeHistory() const;
 };
 
 #endif

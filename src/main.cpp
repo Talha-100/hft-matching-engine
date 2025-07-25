@@ -20,7 +20,7 @@ int main() {
     book.printOrderBook();
 
     std::cout << std::endl;
-    for (const auto& trade : book.getTrades()) {
+    for (const auto& trade : book.getTradeHistory()) {
         std::cout << trade.toString() << "\n";
     }
 

@@ -83,6 +83,6 @@ void OrderBook::matchOrders() {
     }
 }
 
-const std::vector<Trade>& OrderBook::getTrades() const {
+const std::vector<Trade>& OrderBook::getTradeHistory() const {
     return trades;
 }
