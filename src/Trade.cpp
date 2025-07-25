@@ -7,7 +7,7 @@ Trade::Trade(int buyOrderId, int sellOrderId, double price, int quantity)
 
 std::string Trade::toString() const {
     std::ostringstream oss;
-    oss << "Trade[BuyID=" << buyOrderId
+    oss << "TRADE[BuyID=" << buyOrderId
         << ", SellID=" << sellOrderId
         << ", Price=" << price
         << ", Quantity=" << quantity << "]";

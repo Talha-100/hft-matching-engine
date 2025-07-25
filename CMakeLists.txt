@@ -3,8 +3,6 @@ project(hft-sim LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 include_directories(include)
-
-# Main executable
 add_executable(
         hft-sim
         src/main.cpp

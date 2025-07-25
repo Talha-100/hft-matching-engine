@@ -6,7 +6,7 @@ Order::Order(int id, OrderType type, double price, int quantity)
 
 std::string Order::to_string() const {
     std::ostringstream oss;
-    oss << "Order[ID=" << id
+    oss << "ORDER[ID=" << id
         << ", Type=" << (type == OrderType::BUY ? "BUY" : "SELL")
         << ", Price=" << price
         << ", Quantity=" << quantity << "]";

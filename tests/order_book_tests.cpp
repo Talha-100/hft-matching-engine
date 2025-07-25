@@ -81,8 +81,8 @@ TEST_F(OrderBookTest, MatchWhenBuyPriceEqualsSellPrice) {
 
     std::cout.rdbuf(old);
     std::string output = buffer.str();
-    EXPECT_TRUE(output.find("TRADE EXECUTED") != std::string::npos);
-    EXPECT_TRUE(output.find("5 shares") != std::string::npos);
+    EXPECT_TRUE(output.find("TRADE") != std::string::npos);
+    EXPECT_TRUE(output.find("Quantity=5") != std::string::npos);
 }
 
 TEST_F(OrderBookTest, MatchWhenBuyPriceHigherThanSellPrice) {
@@ -95,9 +95,9 @@ TEST_F(OrderBookTest, MatchWhenBuyPriceHigherThanSellPrice) {
 
     std::cout.rdbuf(old);
     std::string output = buffer.str();
-    EXPECT_TRUE(output.find("TRADE EXECUTED") != std::string::npos);
-    EXPECT_TRUE(output.find("5 shares") != std::string::npos);
-    EXPECT_TRUE(output.find("$100") != std::string::npos);
+    EXPECT_TRUE(output.find("TRADE") != std::string::npos);
+    EXPECT_TRUE(output.find("Quantity=5") != std::string::npos);
+    EXPECT_TRUE(output.find("Price=100") != std::string::npos);
 }
 
 TEST_F(OrderBookTest, PartialFillBuyOrder) {
@@ -110,7 +110,7 @@ TEST_F(OrderBookTest, PartialFillBuyOrder) {
 
     std::cout.rdbuf(old);
     std::string output = buffer.str();
-    EXPECT_TRUE(output.find("5 shares") != std::string::npos);
+    EXPECT_TRUE(output.find("Quantity=5") != std::string::npos);
 
     buffer.str("");
     buffer.clear();
@@ -119,7 +119,7 @@ TEST_F(OrderBookTest, PartialFillBuyOrder) {
     orderBook.printOrderBook();
     std::cout.rdbuf(old);
     output = buffer.str();
-    EXPECT_TRUE(output.find("quantity=5") != std::string::npos);
+    EXPECT_TRUE(output.find("Quantity=5") != std::string::npos);
 }
 
 TEST_F(OrderBookTest, PricePriorityMatching) {
@@ -135,8 +135,8 @@ TEST_F(OrderBookTest, PricePriorityMatching) {
     std::cout.rdbuf(old);
     std::string output = buffer.str();
 
-    EXPECT_TRUE(output.find("Buy Order " + std::to_string(highBuyId)) != std::string::npos);
-    EXPECT_TRUE(output.find("Buy Order " + std::to_string(lowBuyId)) == std::string::npos);
+    EXPECT_TRUE(output.find("BuyID=" + std::to_string(highBuyId)) != std::string::npos);
+    EXPECT_TRUE(output.find("BuyID=" + std::to_string(lowBuyId)) == std::string::npos);
 }
 
 TEST_F(OrderBookTest, TimePriorityMatching) {
@@ -152,8 +152,8 @@ TEST_F(OrderBookTest, TimePriorityMatching) {
     std::cout.rdbuf(old);
     std::string output = buffer.str();
 
-    EXPECT_TRUE(output.find("Buy Order " + std::to_string(firstBuyId)) != std::string::npos);
-    EXPECT_TRUE(output.find("Buy Order " + std::to_string(secondBuyId)) == std::string::npos);
+    EXPECT_TRUE(output.find("BuyID=" + std::to_string(firstBuyId)) != std::string::npos);
+    EXPECT_TRUE(output.find("BuyID=" + std::to_string(secondBuyId)) == std::string::npos);
 }
 
 TEST_F(OrderBookTest, MultipleMatches) {
@@ -169,8 +169,8 @@ TEST_F(OrderBookTest, MultipleMatches) {
     std::cout.rdbuf(old);
     std::string output = buffer.str();
 
-    size_t firstTrade = output.find("TRADE EXECUTED");
+    size_t firstTrade = output.find("TRADE");
     EXPECT_NE(firstTrade, std::string::npos);
-    size_t secondTrade = output.find("TRADE EXECUTED", firstTrade + 1);
+    size_t secondTrade = output.find("TRADE", firstTrade + 1);
     EXPECT_NE(secondTrade, std::string::npos);
 }

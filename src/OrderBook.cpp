@@ -69,6 +69,7 @@ void OrderBook::matchOrders() {
         double tradePrice = bestSell.price;
 
         trades.emplace_back(bestBuy.id, bestSell.id, tradePrice, tradeQuantity);
+        std::cout << trades.back().toString() << "\n";
 
         bestBuy.quantity -= tradeQuantity;
         bestSell.quantity -= tradeQuantity;
