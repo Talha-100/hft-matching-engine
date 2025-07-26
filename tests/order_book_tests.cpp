@@ -165,6 +165,7 @@ TEST_F(OrderBookTest, MultipleMatches) {
     orderBook.addOrder(OrderType::SELL, 99.0, 8);
 
     orderBook.matchOrders();
+    auto trades = orderBook.getTradeHistory();
 
     std::cout.rdbuf(old);
     std::string output = buffer.str();
@@ -173,4 +174,6 @@ TEST_F(OrderBookTest, MultipleMatches) {
     EXPECT_NE(firstTrade, std::string::npos);
     size_t secondTrade = output.find("TRADE", firstTrade + 1);
     EXPECT_NE(secondTrade, std::string::npos);
+
+    ASSERT_EQ(trades.size(), 2);
 }
