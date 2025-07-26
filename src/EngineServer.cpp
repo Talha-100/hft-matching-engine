@@ -49,7 +49,7 @@ void EngineServer::handleClient(const std::shared_ptr<tcp::socket>& socket) {
 
                         std::ostringstream response;
                         response << "CONFIRMED OrderID=" << orderId << "\n";
-                        for (const auto& trade : orderBook_.getTradeHistory()) {
+                        for (const auto& trade : orderBook_.getRecentTrades()) {
                             response << trade.toString() << "\n";
                         }
 

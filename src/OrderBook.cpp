@@ -87,3 +87,9 @@ void OrderBook::matchOrders() {
 const std::vector<Trade>& OrderBook::getTradeHistory() const {
     return trades;
 }
+
+std::vector<Trade> OrderBook::getRecentTrades() {
+    auto latest = trades;
+    trades.clear();
+    return latest;
+}

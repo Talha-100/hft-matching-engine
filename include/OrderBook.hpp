@@ -20,6 +20,7 @@ public:
     void printOrderBook() const;
     void matchOrders();
     const std::vector<Trade>& getTradeHistory() const;
+    std::vector<Trade> getRecentTrades();
 };
 
 #endif
