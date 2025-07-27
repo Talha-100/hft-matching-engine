@@ -11,7 +11,8 @@ public:
 
 private:
     void doAccept();
-    void handleClient(const std::shared_ptr<boost::asio::ip::tcp::socket>& socket);
+    void handleClient(const std::shared_ptr<boost::asio::ip::tcp::socket>& socket, bool isNewConnection = true);
+    void handleClientRequest(const std::shared_ptr<boost::asio::ip::tcp::socket>& socket);
 
     boost::asio::ip::tcp::acceptor acceptor_;
     OrderBook orderBook_;

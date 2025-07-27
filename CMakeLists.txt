@@ -5,7 +5,7 @@ project(hft-sim LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set CMake policies to suppress warnings
+# Set CMake policies for modern behaviour and to suppress warnings
 cmake_policy(SET CMP0144 NEW)  # Use upper-case package name variables
 cmake_policy(SET CMP0167 NEW)  # Use modern FindBoost approach
 
@@ -30,49 +30,60 @@ if(NOT Boost_FOUND)
     message(FATAL_ERROR "Boost not found. Please install Boost or specify BOOST_ROOT.")
 endif()
 
-# Main executable
-add_executable(
-    hft-sim
-#    src/main.cpp
-    src/OrderBook.cpp
-    src/Order.cpp
-    src/Trade.cpp
-    src/EngineServer.cpp
-    src/engine_server_main.cpp
+# ================================
+# ⛓ Core library (engine logic)
+# ================================
+add_library(
+        engine_core
+        src/Order.cpp
+        src/OrderBook.cpp
+        src/Trade.cpp
 )
 
-# Configure target properties
 target_include_directories(
-        hft-sim
-    PRIVATE
+        engine_core
+        PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+# ================================
+# 🚀 Main matching engine CLI (optional)
+# ================================
+# add_executable(hft-sim src/main.cpp)
+# target_link_libraries(hft-sim PRIVATE engine_core)
+
+# ================================
+# 🌐 Engine server (Boost.Asio)
+# ================================
+add_executable(
+        engine_server
+        src/EngineServer.cpp
+        src/engine_server_main.cpp
+)
+
+target_include_directories(
+        engine_server
+        PRIVATE
         ${Boost_INCLUDE_DIRS}
 )
 
 target_link_libraries(
-        hft-sim
-    PRIVATE
+        engine_server
+        PRIVATE
+        engine_core
         Boost::system
 )
 
-# Platform-specific compile definitions
-if(WIN32)
-    target_compile_definitions(
-            hft-sim
-        PRIVATE
-            _WIN32_WINNT=0x0A00  # Target Windows 10
-            BOOST_ALL_NO_LIB     # Disable auto-linking
-    )
-endif()
-
-# Testing configuration
+# ================================
+# 🧪 Unit tests (GoogleTest)
+# ================================
 enable_testing()
 
 include(FetchContent)
 FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/heads/main.zip
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        googletest
+        URL https://github.com/google/googletest/archive/refs/heads/main.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
@@ -80,24 +91,15 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
 
-# Test executable
 add_executable(
-    tests
-    tests/order_book_tests.cpp
-    src/OrderBook.cpp
-    src/Order.cpp
-    src/Trade.cpp
-)
-
-target_include_directories(
         tests
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        tests/order_book_tests.cpp
 )
 
 target_link_libraries(
         tests
-    PRIVATE
+        PRIVATE
+        engine_core
         gtest_main
         gtest
 )
@@ -105,13 +107,13 @@ target_link_libraries(
 include(GoogleTest)
 gtest_discover_tests(tests)
 
-# Installation rules
-install(
-        TARGETS hft-sim
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
+# ================================
+# 📦 Installation rules
+# ================================
+install(TARGETS engine_server
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
 )
 
-# Package configuration
 include(CPack)
