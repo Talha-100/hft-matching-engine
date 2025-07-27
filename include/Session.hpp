@@ -35,6 +35,7 @@ private:
     std::queue<std::string> writeQueue_;
     bool writing_;
     bool registered_;
+    bool disconnected_;  // Track if disconnect has already been handled
 };
 
 #endif

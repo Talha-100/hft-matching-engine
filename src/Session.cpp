@@ -11,14 +11,26 @@ Session::Session(tcp::socket socket, OrderBook& orderBook,
                  std::function<void(const std::string&)> disconnectCallback,
                  EngineServer* server)
     : socket_(std::move(socket)), orderBook_(orderBook),
-      disconnectCallback_(disconnectCallback), server_(server), writing_(false), registered_(false) {
+      disconnectCallback_(disconnectCallback), server_(server), writing_(false), registered_(false), disconnected_(false) {
     clientAddress_ = socket_.remote_endpoint().address().to_string();
 }
 
 Session::~Session() {
-    if (registered_) {
-        std::weak_ptr<Session> weakSelf = shared_from_this();
-        MarketPublisher::getInstance().unregisterSession(weakSelf);
+    try {
+        // Ensure socket is closed
+        if (socket_.is_open()) {
+            boost::system::error_code ec;
+            socket_.close(ec);
+            // Ignore errors during cleanup
+        }
+
+        // Note: MarketPublisher cleanup happens automatically via weak_ptr expiration
+        // We can't call shared_from_this() in destructor, but that's okay because
+        // MarketPublisher uses weak_ptr and will clean up expired sessions automatically
+    } catch (const std::exception& e) {
+        std::cerr << "Error during session cleanup: " << e.what() << std::endl;
+    } catch (...) {
+        std::cerr << "Unknown error during session cleanup" << std::endl;
     }
 }
 
@@ -96,6 +108,8 @@ void Session::doRead() {
                     auto timer = std::make_shared<boost::asio::steady_timer>(socket_.get_executor());
                     timer->expires_after(std::chrono::milliseconds(100));
                     timer->async_wait([this, self, timer](boost::system::error_code) {
+                        // Actually close the socket to disconnect
+                        socket_.close();
                         handleDisconnect();
                     });
                     return;
@@ -207,6 +221,12 @@ void Session::doWrite(const std::string& message) {
 }
 
 void Session::handleDisconnect() {
+    // Prevent multiple disconnect handling
+    if (disconnected_) {
+        return;
+    }
+    disconnected_ = true;
+
     std::cout << "Client disconnected: " << clientAddress_ << std::endl;
     if (disconnectCallback_) {
         disconnectCallback_(clientAddress_);
