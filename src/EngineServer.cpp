@@ -65,6 +65,7 @@ void EngineServer::handleClientRequest(const std::shared_ptr<tcp::socket>& socke
                         } else {
                             bool cancelled = orderBook_.cancelOrder(orderId);
                             if (cancelled) {
+                                std::cout << "Order cancelled: " << orderId << std::endl;
                                 response << "CANCELLED OrderID: " << orderId << "\n\n";
                             } else {
                                 response << "ORDER NOT FOUND: " << orderId << "\n\n";
