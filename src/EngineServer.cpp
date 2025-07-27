@@ -53,35 +53,11 @@ void EngineServer::handleClientDisconnect(const std::string& clientAddress) {
 void EngineServer::shutdown() {
     shutdownRequested_ = true;
 
-    // Notify all clients about server shutdown
-    broadcastToAllClients("SERVER SHUTDOWN: Server is shutting down. Disconnecting...\n\n");
-
-    // Close all sessions
-    for (auto& session : sessions_) {
-        // Sessions will handle their own cleanup
-    }
+    // Close all sessions - MarketPublisher will handle cleanup
     sessions_.clear();
 
     // Close acceptor
     acceptor_.close();
 
     std::cout << "All clients disconnected. Server shutdown complete." << std::endl;
-}
-
-void EngineServer::broadcastToAllClients(const std::string& message) {
-    for (auto& session : sessions_) {
-        session->sendMessage(message);
-    }
-}
-
-void EngineServer::broadcastToOthers(const std::string& message, Session* excludeSession) {
-    for (auto& session : sessions_) {
-        if (session.get() != excludeSession) {
-            session->sendMessage(message);
-        }
-    }
-}
-
-const std::set<std::shared_ptr<Session>>& EngineServer::getSessions() const {
-    return sessions_;
 }

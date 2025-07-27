@@ -60,6 +60,7 @@ add_executable(
         src/EngineServer.cpp
         src/engine_server_main.cpp
         src/Session.cpp
+        src/MarketPublisher.cpp
 )
 
 target_include_directories(

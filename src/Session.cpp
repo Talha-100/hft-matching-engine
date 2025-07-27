@@ -1,5 +1,6 @@
 #include "Session.hpp"
 #include "EngineServer.hpp"
+#include "MarketPublisher.hpp"
 #include <iostream>
 #include <sstream>
 #include <chrono>
@@ -10,12 +11,28 @@ Session::Session(tcp::socket socket, OrderBook& orderBook,
                  std::function<void(const std::string&)> disconnectCallback,
                  EngineServer* server)
     : socket_(std::move(socket)), orderBook_(orderBook),
-      disconnectCallback_(disconnectCallback), server_(server), writing_(false) {
+      disconnectCallback_(disconnectCallback), server_(server), writing_(false), registered_(false) {
     clientAddress_ = socket_.remote_endpoint().address().to_string();
 }
 
+Session::~Session() {
+    if (registered_) {
+        std::weak_ptr<Session> weakSelf = shared_from_this();
+        MarketPublisher::getInstance().unregisterSession(weakSelf);
+    }
+}
+
 void Session::start() {
-    std::cout << "Client connected: " << clientAddress_ << std::endl;
+    // Register with MarketPublisher first
+    std::weak_ptr<Session> weakSelf = shared_from_this();
+    MarketPublisher::getInstance().registerSession(weakSelf);
+    registered_ = true;
+
+    // Get total client count and display connection message
+    size_t totalClients = MarketPublisher::getInstance().getSessionCount();
+    std::cout << "Client connected: " << clientAddress_
+              << " (Total active clients: " << totalClients << ")" << std::endl;
+
     sendWelcomeMessage();
     doRead();
 }
@@ -96,31 +113,63 @@ void Session::doRead() {
                         }
                     }
                 } else if (command == "BUY" || command == "SELL") {
-                    double price;
-                    int quantity;
+                    std::string priceStr, quantityStr;
 
-                    if (!(iss >> price >> quantity) || price <= 0 || quantity <= 0) {
+                    if (!(iss >> priceStr >> quantityStr)) {
                         response << "INVALID INPUT\n\n";
                     } else {
-                        OrderType type = (command == "BUY") ? OrderType::BUY : OrderType::SELL;
-                        int orderId = orderBook_.addOrder(type, price, quantity);
-                        orderBook_.matchOrders();
+                        try {
+                            // Parse price - both integers and decimals are valid
+                            double price = std::stod(priceStr);
+                            int quantity = std::stoi(quantityStr);
 
-                        // Get new trades after matching
-                        auto newTrades = orderBook_.getRecentTrades();
+                            // Validation: both must be positive
+                            if (price <= 0.0 || quantity <= 0) {
+                                response << "INVALID INPUT\n\n";
+                            } else {
+                                OrderType type = (command == "BUY") ? OrderType::BUY : OrderType::SELL;
 
-                        response << "CONFIRMED OrderID=" << orderId << "\n\n";
+                                // Debug logging
+                                std::cout << "Processing order: " << command << " " << price << " " << quantity
+                                         << " from " << clientAddress_ << std::endl;
 
-                        // Send trades to this client and broadcast to others
-                        for (const auto& trade : newTrades) {
-                            std::string tradeMsg = trade.toString() + "\n\n";
-                            response << tradeMsg;
+                                int orderId = orderBook_.addOrder(type, price, quantity);
+                                orderBook_.matchOrders();
 
-                            // Broadcast to other clients with MARKET prefix
-                            if (server_) {
-                                std::string marketMsg = "MARKET " + tradeMsg;
-                                server_->broadcastToOthers(marketMsg, this);
+                                // Get new trades after matching
+                                auto newTrades = orderBook_.getRecentTrades();
+
+                                response << "CONFIRMED OrderID: " << orderId << "\n\n";
+
+                                std::cout << "Generated " << newTrades.size() << " trades" << std::endl;
+
+                                // Send detailed trade info to this client and broadcast market data to others
+                                for (const auto& trade : newTrades) {
+                                    try {
+                                        std::string tradeMsg = trade.toString() + "\n\n";
+                                        response << tradeMsg;
+
+                                        // Broadcast clean market data to other clients via MarketPublisher
+                                        std::weak_ptr<Session> weakSelf = shared_from_this();
+                                        MarketPublisher::getInstance().broadcastTradeToMarket(trade, weakSelf);
+
+                                        std::cout << "Broadcasted trade: " << trade.toString() << std::endl;
+                                    } catch (const std::exception& e) {
+                                        std::cerr << "Error processing trade: " << e.what() << std::endl;
+                                    }
+                                }
                             }
+                        } catch (const std::invalid_argument& e) {
+                            std::cerr << "Invalid number format in order from " << clientAddress_
+                                     << ": " << priceStr << " " << quantityStr << std::endl;
+                            response << "INVALID INPUT\n\n";
+                        } catch (const std::out_of_range& e) {
+                            std::cerr << "Number out of range in order from " << clientAddress_
+                                     << ": " << priceStr << " " << quantityStr << std::endl;
+                            response << "INVALID INPUT\n\n";
+                        } catch (const std::exception& e) {
+                            std::cerr << "Error parsing order from " << clientAddress_ << ": " << e.what() << std::endl;
+                            response << "INVALID INPUT\n\n";
                         }
                     }
                 } else {

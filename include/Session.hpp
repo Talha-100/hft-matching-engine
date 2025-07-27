@@ -14,6 +14,8 @@ public:
     Session(boost::asio::ip::tcp::socket socket, OrderBook& orderBook,
             std::function<void(const std::string&)> disconnectCallback,
             EngineServer* server);
+    ~Session();
+
     void start();
     std::string getClientAddress() const;
     void sendMessage(const std::string& message);
@@ -32,6 +34,7 @@ private:
     EngineServer* server_;
     std::queue<std::string> writeQueue_;
     bool writing_;
+    bool registered_;
 };
 
 #endif

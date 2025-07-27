@@ -11,9 +11,6 @@ class EngineServer {
 public:
     EngineServer(boost::asio::io_context& io_context, short port);
     void shutdown();
-    void broadcastToAllClients(const std::string& message);
-    void broadcastToOthers(const std::string& message, Session* excludeSession);
-    const std::set<std::shared_ptr<Session>>& getSessions() const;
 
 private:
     void doAccept();
