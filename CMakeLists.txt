@@ -59,6 +59,7 @@ add_executable(
         engine_server
         src/EngineServer.cpp
         src/engine_server_main.cpp
+        src/Session.cpp
 )
 
 target_include_directories(

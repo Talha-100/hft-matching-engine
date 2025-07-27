@@ -1,101 +1,87 @@
 #include "EngineServer.hpp"
 #include <boost/asio.hpp>
 #include <iostream>
-#include <sstream>
+#include <algorithm>
 
 using boost::asio::ip::tcp;
 
 EngineServer::EngineServer(boost::asio::io_context& io_context, short port)
-    : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)) {
+    : acceptor_(io_context, tcp::endpoint(tcp::v4(), port)), shutdownRequested_(false) {
     doAccept();
 }
 
 void EngineServer::doAccept() {
-    auto socket = std::make_shared<tcp::socket>(acceptor_.get_executor());
-    acceptor_.async_accept(*socket,
-        boost::asio::bind_executor(acceptor_.get_executor(),
-            [this, socket](const boost::system::error_code& error) {
-                if (!error) {
-                    handleClient(socket, true); // true = new connection
-                } else {
-                    std::cerr << "Accept error: " << error.message() << std::endl;
-                }
+    if (shutdownRequested_) return;
+
+    acceptor_.async_accept(
+        [this](boost::system::error_code ec, tcp::socket socket) {
+            if (!ec && !shutdownRequested_) {
+                auto session = std::make_shared<Session>(
+                    std::move(socket),
+                    orderBook_,
+                    [this](const std::string& clientAddress) {
+                        handleClientDisconnect(clientAddress);
+                    },
+                    this
+                );
+                sessions_.insert(session);
+                session->start();
+            } else if (ec && !shutdownRequested_) {
+                std::cerr << "Accept error: " << ec.message() << std::endl;
+            }
+            if (!shutdownRequested_) {
                 doAccept();
-            }));
+            }
+        });
 }
 
-void EngineServer::handleClient(const std::shared_ptr<tcp::socket>& socket, bool isNewConnection) {
-    if (isNewConnection) {
-        std::cout << "Client connected: " << socket->remote_endpoint().address().to_string() << std::endl;
+void EngineServer::handleClientDisconnect(const std::string& clientAddress) {
+    // Remove disconnected session from active sessions
+    auto it = std::find_if(sessions_.begin(), sessions_.end(),
+        [&clientAddress](const std::shared_ptr<Session>& session) {
+            return session->getClientAddress() == clientAddress;
+        });
+
+    if (it != sessions_.end()) {
+        sessions_.erase(it);
     }
 
-    handleClientRequest(socket);
+    // Log the disconnection and current client count
+    std::cout << "Total active clients: " << sessions_.size() << std::endl;
 }
 
-void EngineServer::handleClientRequest(const std::shared_ptr<tcp::socket>& socket) {
-    auto buffer = std::make_shared<boost::asio::streambuf>();
+void EngineServer::shutdown() {
+    shutdownRequested_ = true;
 
-    boost::asio::async_read_until(*socket, *buffer, '\n',
-        boost::asio::bind_executor(socket->get_executor(),
-            [this, socket, buffer](const boost::system::error_code& error, std::size_t length) {
-                if (!error) {
-                    std::istream is(buffer.get());
-                    std::string line;
-                    std::getline(is, line);
+    // Notify all clients about server shutdown
+    broadcastToAllClients("SERVER SHUTDOWN: Server is shutting down. Disconnecting...\n\n");
 
-                    std::istringstream iss(line);
-                    std::string command;
+    // Close all sessions
+    for (auto& session : sessions_) {
+        // Sessions will handle their own cleanup
+    }
+    sessions_.clear();
 
-                    if (!(iss >> command)) {
-                        std::string err = "INVALID INPUT\n\n";
-                        boost::asio::async_write(*socket, boost::asio::buffer(err),
-                            boost::asio::bind_executor(socket->get_executor(),
-                                [this, socket](boost::system::error_code, std::size_t) {
-                                    handleClient(socket, false); // false = not a new connection
-                                }));
-                        return;
-                    }
+    // Close acceptor
+    acceptor_.close();
 
-                    std::ostringstream response;
+    std::cout << "All clients disconnected. Server shutdown complete." << std::endl;
+}
 
-                    if (command == "CANCEL") {
-                        int orderId;
-                        if (!(iss >> orderId) || orderId <= 0) {
-                            response << "INVALID INPUT\n\n";
-                        } else {
-                            bool cancelled = orderBook_.cancelOrder(orderId);
-                            if (cancelled) {
-                                std::cout << "Order cancelled: " << orderId << std::endl;
-                                response << "CANCELLED OrderID: " << orderId << "\n\n";
-                            } else {
-                                response << "ORDER NOT FOUND: " << orderId << "\n\n";
-                            }
-                        }
-                    } else if (command == "BUY" || command == "SELL") {
-                        double price;
-                        int quantity;
+void EngineServer::broadcastToAllClients(const std::string& message) {
+    for (auto& session : sessions_) {
+        session->sendMessage(message);
+    }
+}
 
-                        if (!(iss >> price >> quantity) || price <= 0 || quantity <= 0) {
-                            response << "INVALID INPUT\n\n";
-                        } else {
-                            OrderType type = (command == "BUY") ? OrderType::BUY : OrderType::SELL;
-                            int orderId = orderBook_.addOrder(type, price, quantity);
-                            orderBook_.matchOrders();
+void EngineServer::broadcastToOthers(const std::string& message, Session* excludeSession) {
+    for (auto& session : sessions_) {
+        if (session.get() != excludeSession) {
+            session->sendMessage(message);
+        }
+    }
+}
 
-                            response << "CONFIRMED OrderID=" << orderId << "\n\n";
-                            for (const auto& trade : orderBook_.getRecentTrades()) {
-                                response << trade.toString() << "\n\n";
-                            }
-                        }
-                    } else {
-                        response << "INVALID INPUT\n\n";
-                    }
-
-                    boost::asio::async_write(*socket, boost::asio::buffer(response.str()),
-                        boost::asio::bind_executor(socket->get_executor(),
-                            [this, socket](boost::system::error_code, std::size_t) {
-                                handleClient(socket, false); // false = not a new connection
-                            }));
-                }
-            }));
+const std::set<std::shared_ptr<Session>>& EngineServer::getSessions() const {
+    return sessions_;
 }
