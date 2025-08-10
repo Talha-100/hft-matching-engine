@@ -73,7 +73,7 @@ void Session::sendWelcomeMessage() {
     welcome << "  BUY <price> <quantity>   - Place a buy order\n";
     welcome << "  SELL <price> <quantity>  - Place a sell order\n";
     welcome << "  CANCEL <orderId>         - Cancel an existing order\n";
-    welcome << "  DISCONNECT               - Disconnect from server\n";
+    welcome << "  DC                       - Disconnect from server\n";
     welcome << "\nExample: BUY 100.50 25\n";
     welcome << "         SELL 101.00 10\n";
     welcome << "         CANCEL 5\n";
@@ -101,7 +101,7 @@ void Session::doRead() {
 
                 std::ostringstream response;
 
-                if (command == "DISCONNECT") {
+                if (command == "DC") {
                     response << "Disconnecting...\n\n";
                     sendMessage(response.str());
                     // Give time for message to be sent before closing
