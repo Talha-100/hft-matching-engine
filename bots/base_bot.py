@@ -41,7 +41,6 @@ class BaseBot:
         self._stop = asyncio.Event()
         self._connected = asyncio.Event()
         self._log = logging.getLogger(self.name)
-        self._in_welcome_message = False
 
     # ---------- Public API ----------
 
@@ -120,13 +119,6 @@ class BaseBot:
     async def on_cancel(self, order_id: int) -> None:
         self._log.info("CANCELLED OrderID: %d", order_id)
 
-    async def on_welcome_message(self, line: str) -> None:
-        """
-        Called for welcome/info messages from the server.
-        Override this to handle welcome messages differently.
-        """
-        self._log.debug("WELCOME: %s", line)
-
     async def on_raw(self, line: str) -> None:
         """
         Called on specific handlers; useful for logging everything.
@@ -175,36 +167,6 @@ class BaseBot:
         if not s:
             return
 
-        # Check if this is the start of a welcome message
-        if s.startswith("=") and "=" in s[1:]:  # Lines with multiple = characters
-            self._in_welcome_message = True
-            await self.on_welcome_message(s)
-            await self.on_raw(s)
-            return
-
-        # If we're in a welcome message, check if it's ending
-        if self._in_welcome_message:
-            # Welcome message ends with the final === line
-            if s.startswith("=") and s.endswith("=") and len(s) > 10:
-                await self.on_welcome_message(s)
-                await self.on_raw(s)
-                self._in_welcome_message = False
-                return
-            # All lines during welcome message are welcome content
-            await self.on_welcome_message(s)
-            await self.on_raw(s)
-            return
-
-        # Handle any remaining welcome/info messages that might not be in the main block
-        if ("Welcome" in s or 
-            "Available Commands" in s or
-            "Place a" in s or
-            "Cancel an" in s or
-            "Disconnect from" in s):
-            await self.on_welcome_message(s)
-            await self.on_raw(s)
-            return
-
         # Fast-path checks for protocol messages (order matters; keep conservative parsing)
         if s.startswith("CONFIRMED"):
             order_id = _parse_trailing_int(s, key="OrderID:")
@@ -236,13 +198,9 @@ class BaseBot:
                 await self.on_cancel(order_id)
             else:
                 await self.on_invalid_input(s)
-        
+
         else:
-            # Check if this might be a welcome message we missed
-            if any(keyword in s.lower() for keyword in ["command", "order", "engine", "server", "help"]):
-                await self.on_welcome_message(s)
-            else:
-                self._log.info("Unknown line: %s", s)
+            self._log.info("Unknown line: %s", s)
         
         # Always call on_raw for full traceability
         await self.on_raw(s)

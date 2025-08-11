@@ -164,7 +164,7 @@ void Session::doRead() {
                                         response << tradeMsg;
 
                                         // Broadcast clean market data to other clients via MarketPublisher
-                                        std::weak_ptr<Session> weakSelf = shared_from_this();
+                                        std::weak_ptr weakSelf = shared_from_this();
                                         MarketPublisher::getInstance().broadcastTradeToMarket(trade, weakSelf);
                                     } catch (const std::exception& e) {
                                         std::cerr << "Error processing trade: " << e.what() << std::endl;
