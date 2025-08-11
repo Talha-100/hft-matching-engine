@@ -68,7 +68,7 @@ void Session::sendWelcomeMessage() {
     std::ostringstream welcome;
     welcome << "====================================\n";
     welcome << "  HFT Matching Engine - Welcome!\n";
-    welcome << "====================================\n";
+    welcome << "------------------------------------\n";
     welcome << "Available Commands:\n";
     welcome << "  BUY <price> <quantity>   - Place a buy order\n";
     welcome << "  SELL <price> <quantity>  - Place a sell order\n";
