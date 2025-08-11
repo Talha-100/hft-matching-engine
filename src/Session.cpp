@@ -56,7 +56,7 @@ std::string Session::getClientAddress() const {
 void Session::sendMessage(const std::string& message) {
     auto self(shared_from_this());
     boost::asio::post(socket_.get_executor(),
-        [this, self, message]() {
+        [this, message]() {
             writeQueue_.push(message);
             if (!writing_) {
                 doWrite("");
@@ -144,8 +144,8 @@ void Session::doRead() {
                                 OrderType type = (command == "BUY") ? OrderType::BUY : OrderType::SELL;
 
                                 // Debug logging
-                                std::cout << "Processing order: " << command << " " << price << " " << quantity
-                                         << " from " << clientAddress_ << std::endl;
+                                std::cout << "Processing order: [" << command << " " << price << " " << quantity
+                                         << "] from " << clientAddress_ << std::endl;
 
                                 int orderId = orderBook_.addOrder(type, price, quantity);
                                 orderBook_.matchOrders();
@@ -155,7 +155,7 @@ void Session::doRead() {
 
                                 response << "CONFIRMED OrderID: " << orderId << "\n\n";
 
-                                std::cout << "Generated " << newTrades.size() << " trades" << std::endl;
+                                std::cout << "Generated " << newTrades.size() << " trades" << "\n" << std::endl;
 
                                 // Send detailed trade info to this client and broadcast market data to others
                                 for (const auto& trade : newTrades) {
@@ -166,8 +166,6 @@ void Session::doRead() {
                                         // Broadcast clean market data to other clients via MarketPublisher
                                         std::weak_ptr<Session> weakSelf = shared_from_this();
                                         MarketPublisher::getInstance().broadcastTradeToMarket(trade, weakSelf);
-
-                                        std::cout << "Broadcasted trade: " << trade.toString() << std::endl;
                                     } catch (const std::exception& e) {
                                         std::cerr << "Error processing trade: " << e.what() << std::endl;
                                     }
