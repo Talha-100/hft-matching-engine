@@ -12,10 +12,17 @@ NoiseBot:
 """
 
 class NoiseBot(BaseBot):
-    def __init__(self, mid:float, spread: float, sigma: float,
-                 qty_min: int, qty_max: int,
-                 sleep_min_ms: int, sleep_max_ms: int,
-                 **kwargs):
+    def __init__(
+        self,
+        mid:float,
+        spread: float,
+        sigma: float,
+        qty_min: int,
+        qty_max: int,
+        sleep_min_ms: int,
+        sleep_max_ms: int,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.mid = mid
         self.spread = spread
