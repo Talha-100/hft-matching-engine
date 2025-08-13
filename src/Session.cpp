@@ -83,10 +83,15 @@ void Session::sendWelcomeMessage() {
 }
 
 void Session::doRead() {
+    // Check if disconnected before starting new read operation
+    if (disconnected_ || !socket_.is_open()) {
+        return;
+    }
+
     auto self(shared_from_this());
     boost::asio::async_read_until(socket_, buffer_, '\n',
         [this, self](boost::system::error_code ec, std::size_t length) {
-            if (!ec) {
+            if (!ec && !disconnected_) {
                 std::istream is(&buffer_);
                 std::string line;
                 std::getline(is, line);
@@ -189,6 +194,7 @@ void Session::doRead() {
                 }
 
                 sendMessage(response.str());
+                doRead(); // Continue reading
             } else {
                 handleDisconnect();
             }
@@ -196,12 +202,17 @@ void Session::doRead() {
 }
 
 void Session::doWrite(const std::string& message) {
+    // Check if disconnected before attempting write
+    if (disconnected_ || !socket_.is_open()) {
+        writing_ = false;
+        return;
+    }
+
     auto self(shared_from_this());
 
     if (writeQueue_.empty()) {
         writing_ = false;
-        doRead();
-        return;
+        return; // Don't call doRead from here - let the caller handle it
     }
 
     writing_ = true;
@@ -210,9 +221,10 @@ void Session::doWrite(const std::string& message) {
 
     boost::asio::async_write(socket_, boost::asio::buffer(msg),
         [this, self](boost::system::error_code ec, std::size_t /*length*/) {
-            if (!ec) {
-                doWrite("");  // Process next message in queue
+            if (!ec && !disconnected_) {
+                doWrite(""); // Process next message in queue
             } else {
+                writing_ = false;
                 handleDisconnect();
             }
         });
